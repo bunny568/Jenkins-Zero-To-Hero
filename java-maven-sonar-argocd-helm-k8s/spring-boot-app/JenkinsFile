@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'maven'
+      image 'abhishekf5/maven-abhishek-docker-agent:v1'
       args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
     }
   }
@@ -9,7 +9,7 @@ pipeline {
     stage('Checkout') {
       steps {
         sh 'echo passed'
-        //git branch: 'main', url: 'https://github.com/bunny568/Jenkins-Zero-To-Hero.git'
+        git branch: 'main', url: 'https://github.com/bunny568/Jenkins-Zero-To-Hero.git'
       }
     }
     stage('Build and Test') {
@@ -21,7 +21,7 @@ pipeline {
     }
     stage('Static Code Analysis') {
       environment {
-        SONAR_URL = "http://3.86.180.52:9000"
+        SONAR_URL = "http://34.201.116.83:9000"
       }
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
@@ -31,18 +31,16 @@ pipeline {
     }
     stage('Build and Push Docker Image') {
       environment {
-        DOCKER_IMAGE = "maven/ultimate-cicd:${BUILD_NUMBER}"
+        DOCKER_IMAGE = "bunny568/ultimate-cicd:${BUILD_NUMBER}"
         // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
         REGISTRY_CREDENTIALS = credentials('docker-cred')
       }
       steps {
-        script {
-            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
-            def dockerImage = docker.image("${DOCKER_IMAGE}")
-            docker.withRegistry('https://index.docker.io/v1/', "docker-cred") {
-                dockerImage.push()
-            }
-        }
+         sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
+            sh 'docker login -u bunny568 -p mudam@ https://registry.hub.docker.com'
+            sh 'docker tag ${DOCKER_IMAGE} registry.hub.docker.com/${DOCKER_IMAGE}'
+            sh 'docker push registry.hub.docker.com/${DOCKER_IMAGE}'
+        
       }
     }
     stage('Update Deployment File') {
